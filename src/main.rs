@@ -32,3 +32,14 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
     }
     out
 }
+
+fn human_readable_address(prefix: &[u8], raw: &[u8])-> String {
+    let mut key = Vec::new();
+    let mut output = Vec::new();
+    key.extend_from_slice(prefix);
+    key.extend_from_slice(raw);
+    let checksum = &shad(&key)[..checksum_length];
+    output.extend_from_slice(&key);
+    output.extend_from_slice(checksum);
+    bs58::encode(output).into_string()
+}
