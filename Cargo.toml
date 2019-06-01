@@ -9,4 +9,4 @@ rand = "0.6"
 num-bigint = { version = "0.2.2", features = ["rand"] }
 sha2 = "0.8.0"
 ed25519-dalek = "0.9.1"
-base58 = "0.1.0"
+bs58 = "0.2.2"
