@@ -23,7 +23,15 @@ fn main() {
     println!("{}\n{}", pub_address, priv_address);
     let prefixes = read_file();
     let prefixes_u8 = prefixes_as_bytes(prefixes);
-
+    loop {
+        let keypair = generate_ed25519_keypair();
+        let pub_bytes = assemble_address_bytes(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+        for prefix in prefixes_u8.iter() {
+            if compare_prefixes(prefix, &pub_bytes) {
+                println!("{}", bs58::encode(&pub_bytes).into_string())
+            }
+        }
+    }
 }
 
 fn base58_char(c: char)-> Option<char> {
@@ -66,8 +74,8 @@ fn prefixes_as_bytes(prefixes: Vec<String>) -> Vec<Vec<u8>> {
     prefixes_u8
 }
 
-fn compare_prefixes(prefix: Vec<u8>, pub_address: Vec<u8>) -> bool {
-    pub_address.starts_with(&prefix)
+fn compare_prefixes(prefix: &Vec<u8>, pub_address: &Vec<u8>) -> bool {
+    pub_address.starts_with(prefix)
 }
 
 fn parse_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
