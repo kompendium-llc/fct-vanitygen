@@ -21,6 +21,8 @@ fn main() {
     let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
     let priv_address = human_readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
     println!("{}\n{}", pub_address, priv_address);
+    let prefixes = read_file();
+    let prefixes_u8 = prefixes_as_bytes(prefixes);
 
 }
 
@@ -55,11 +57,17 @@ fn read_file() -> Vec<String> {
 }
 
 fn prefixes_as_bytes(prefixes: Vec<String>) -> Vec<Vec<u8>> {
-    let mut prefix_bytes = Vec::new(); 
+    let mut prefixes_u8 = Vec::new(); 
     for prefix in prefixes {
-        prefix_bytes.push(prefix.as_bytes().to_vec())
+        let mut bytes = vec!(PUB_PREFIX[0], PUB_PREFIX[1]);
+        bytes.extend(prefix.as_bytes());
+        prefixes_u8.push(bytes);
     }
-    prefix_bytes
+    prefixes_u8
+}
+
+fn compare_prefixes(prefix: Vec<u8>, pub_address: Vec<u8>) -> bool {
+    pub_address.starts_with(&prefix)
 }
 
 fn parse_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
