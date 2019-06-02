@@ -52,6 +52,16 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
     out
 }
 
+fn assemble_address_bytes(prefix: &[u8], raw: &[u8])-> Vec<u8> {
+    let (mut key, mut output) = (Vec::new(), Vec::new());
+    key.extend_from_slice(prefix);
+    key.extend_from_slice(&raw[..key_length]);
+    let checksum = &double_sha(&key)[..checksum_length];
+    output.extend_from_slice(&key);
+    output.extend_from_slice(checksum);
+    output
+}
+
 fn human_readable_address(prefix: &[u8], raw: &[u8])-> String {
     let (mut key, mut output) = (Vec::new(), Vec::new());
     key.extend_from_slice(prefix);
