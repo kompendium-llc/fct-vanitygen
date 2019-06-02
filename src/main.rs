@@ -28,7 +28,7 @@ fn base58_char(c: char)-> Option<char> {
     B58_ALPHABET.chars().find(|x: &char| x == &c)
 }
 
-fn is_valid_base58(prefix: String) -> bool {
+fn valid_base58(prefix: &str) -> bool {
     let mut valid = false;
     for letter in prefix.chars() {
         match base58_char(letter) {
@@ -41,13 +41,15 @@ fn is_valid_base58(prefix: String) -> bool {
 
 fn read_file() -> Vec<String> {
     let mut prefixes = Vec::new();
-    let lines = parse_lines(FILEPATH).expect("Unable to open prefixes file");
+    let lines = parse_lines(FILEPATH).expect("Unable to open prefix file");
     for prefix in lines {
         let word = prefix.unwrap();
-        if word.is_ascii() {
+        if valid_base58(&word) {
             prefixes.push(word);
         }
-        
+        else {
+            println!("Skipping invalid: {}", word);
+        }
     }
     prefixes
 }
