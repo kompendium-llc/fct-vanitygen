@@ -7,13 +7,8 @@ use files::*;
 use address::*;
 use matching::*;
 use config::parse_args;
-use std::env::current_dir;
-
-
-
 
 fn main() {
-    dbg!(current_dir().unwrap());
     let config = parse_args();
     let names = read_file(&config.input);
     let set = compile_regex(names, config.case, &config.regex_prefix);
@@ -22,9 +17,11 @@ fn main() {
 
     loop {
         let keypair = generate_ed25519_keypair();
-        let pub_address = readable(&config.pub_prefix, &rcd(keypair.public.to_bytes()));
+        let pub_address = readable(&config.pub_prefix,
+                                    &rcd(keypair.public.to_bytes()));
         if set.is_match(&pub_address){
-            let priv_address = readable(&config.priv_prefix, &keypair.secret.to_bytes());
+            let priv_address = readable(&config.priv_prefix,
+                                        &keypair.secret.to_bytes());
             write_keys(&mut keys_file, &pub_address, &priv_address);
             if config.verbose {
                 println!("Public Address: {}\nPrivate Address: {}\n",
