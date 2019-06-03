@@ -24,8 +24,8 @@ pub struct Config {
 pub fn parse_args() -> Config {
     let args = get_args();
     let mut config = Config {
-        input: args.value_of("Input").unwrap_or(FILEPATH).to_string(),
-        output: args.value_of("Output").unwrap_or(KEYSPATH).to_string(),
+        input: args.value_of("Input File").unwrap_or(FILEPATH).to_string(),
+        output: args.value_of("Output File").unwrap_or(KEYSPATH).to_string(),
         verbose: args.is_present("Verbose"),
         threads: args.value_of("Threads").unwrap_or("2")
                         .parse::<u8>().expect("Invalid Thread Number"),
@@ -43,11 +43,11 @@ fn get_args<'a>() -> ArgMatches<'a>{
     App::new("fct address generator")
             .version(clap::crate_version!())
             .author("Mitchell Berry")
-            .about("Creates custom factoid addresses")
+            .about("Creates custom addresses for use with the Factom protocol")
             .arg(Arg::with_name("Entry Credit Address")
                 .short("e")
                 .long("entry-credit")
-                .help("Generates entry redit addresses instead of factoid addresses"))
+                .help("Generates entry credit addresses instead of factoid addresses"))
             .arg(Arg::with_name("Threads")
                 .short("t")
                 .long("threads")
@@ -57,12 +57,12 @@ fn get_args<'a>() -> ArgMatches<'a>{
                 .short("v")
                 .long("verbose")
                 .help("Prints matched address and private key"))
-            .arg(Arg::with_name("Input")
+            .arg(Arg::with_name("Input File")
                 .short("i")
                 .long("input")
                 .takes_value(true)
-                .help("Sets the input file to use. Default: names.txt"))
-            .arg(Arg::with_name("Output")
+                .help("Sets the input file of names seperated by newlines. Default: names.txt"))
+            .arg(Arg::with_name("Output File")
                 .short("o")
                 .long("output")
                 .takes_value(true)
