@@ -1,12 +1,13 @@
-use num_bigint::{BigUint, RandBigInt};
-use sha2::{Sha256, Sha512, Digest};
-use rand::rngs::OsRng;
-use ed25519_dalek::Keypair;
-use std::fs::File;
-use std::io::{self, BufRead};
 use std::path::Path;
-use std::env::current_dir;
+use std::io::prelude::*;
+use std::io::{self, BufRead};
+use std::fs::{File, OpenOptions};
 use regex::RegexSet;
+use rand::rngs::OsRng;
+use std::env::current_dir;
+use ed25519_dalek::Keypair;
+use clap::{Arg, App, ArgMatches};
+use sha2::{Sha256, Sha512, Digest};
 
 const KEY_LENGTH: usize = 32;
 const CHECKSUM_LENGTH: usize = 4;
@@ -15,38 +16,72 @@ const PUB_PREFIX: [u8; 2] = [0x5f, 0xb1];
 const PRIV_PREFIX: [u8; 2] = [0x64, 0x78];
 
 const FILEPATH: &str = "target\\debug\\names.txt";
-const KEYSPATH: &str = "fct_keys.txt";
+const KEYSPATH: &str = "keys.txt";
 const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
 
+struct Args {
+    input: Box<Path>,
+    output: Box<Path>,
+    verbose: bool
+}
 
 fn main() {
-    // let keypair = generate_ed25519_keypair();
-    // let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
-    // let priv_address = human_readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
-    // println!("{}\n{}", pub_address, priv_address);
-    dbg!(current_dir());
-    let names = read_file(FILEPATH);
+    dbg!(current_dir().unwrap());
+    let args = parse_args();
+    let input_file = args.value_of("Input").unwrap_or(FILEPATH);
+    let output_file = args.value_of("Output").unwrap_or(KEYSPATH);
+    let verbose = args.is_present("Verbose");
+    let names = read_file(input_file);
     let set = compile_regex(names);
-    // let prefixes_u8 = prefixes_as_bytes(prefixes);
-    // dbg!(bs58::decode("FA2tYULAgg3XPgeE5St62xvvQAVaAZin34pcDbAVdRAWHEEshrks").into_vec().unwrap());
+    let mut keys_file = initialise_output_file(output_file);
+
     loop {
         let keypair = generate_ed25519_keypair();
-        let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+        let pub_address = readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
         if check_match(&pub_address, &set){
-            println!("{}", pub_address);
+            let priv_address = readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
+            write_keys(&mut keys_file, &pub_address, &priv_address);
+            if verbose {
+                println!("Public Address: {}\nPrivate Address: {}\n",
+                         pub_address, priv_address);
+            }
         }
-
-
-        // let pub_bytes = assemble_address_bytes(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
-        // for prefix in prefixes_u8.iter() {
-        //     if compare_prefixes(prefix, &pub_bytes) {
-        //         // println!("{}", bs58::encode(&prefix).into_string());
-        //         println!("{}", bs58::encode(&pub_bytes).into_string());
-        //         // dbg!(&prefix);
-        //         // dbg!(&pub_bytes[..4]);
-        //     }
-        // }
     }
+}
+
+fn write_keys(keys_file: &mut File, public: &str, private: &str) {
+    if let Err(e) = writeln!(keys_file,"{}\n{}\n", &public, &private) {
+        eprintln!("Couldn't write to file: {}", e);
+    }       
+}
+
+fn initialise_output_file(output_file: &str) -> File {
+    OpenOptions::new()
+            .append(true)
+            .open(output_file)
+            .expect("Unable to initialise output file")
+}
+
+fn parse_args<'a>() -> ArgMatches<'a>{
+    App::new("fct address generator")
+            .version(clap::crate_version!())
+            .author("Mitchell Berry")
+            .about("Creates custom factoid addresses")
+            .arg(Arg::with_name("Verbose")
+                .short("v")
+                .long("verbose")
+                .help("Prints matched address and private key"))
+            .arg(Arg::with_name("Input")
+                .short("i")
+                .long("input")
+                .takes_value(true)
+                .help("Sets the input file to use (Default: names.txt)"))
+            .arg(Arg::with_name("Output")
+                .short("o")
+                .long("output")
+                .takes_value(true)
+                .help("Sets the output file for matched keys (Default: keys.txt)"))
+            .get_matches()
 }
 
 fn compile_regex(names: Vec<String>) -> RegexSet{
@@ -92,31 +127,12 @@ fn read_file(filepath: &str) -> Vec<String> {
     prefixes
 }
 
-// fn prefixes_as_bytes(prefixes: Vec<String>) -> Vec<Vec<u8>> {
-//     let mut prefixes_u8 = Vec::new(); 
-//     for prefix in prefixes {
-//         let mut bytes = vec!(PUB_PREFIX[0], PUB_PREFIX[1]);
-//         bytes.extend(bs58::decode(prefix).into_vec().unwrap());
-//         prefixes_u8.push(bytes);
-//     }
-//     prefixes_u8
-// }
-
-// fn compare_prefixes(prefix: &Vec<u8>, pub_address: &Vec<u8>) -> bool {
-//     pub_address.starts_with(prefix)
-// }
-
 fn parse_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<Path>,
 {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
-}
-
-fn generate_256_uint()-> BigUint {
-    let mut rng = rand::thread_rng();
-    rng.gen_biguint(256)
 }
 
 fn generate_ed25519_keypair()-> Keypair {
@@ -146,17 +162,7 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
     out
 }
 
-// fn assemble_address_bytes(prefix: &[u8], raw: &[u8])-> Vec<u8> {
-//     let (mut key, mut output) = (Vec::new(), Vec::new());
-//     key.extend_from_slice(prefix);
-//     key.extend_from_slice(&raw[..KEY_LENGTH]);
-//     let checksum = &double_sha(&key)[..CHECKSUM_LENGTH];
-//     output.extend_from_slice(&key);
-//     output.extend_from_slice(checksum);
-//     output
-// }
-
-fn human_readable_address(prefix: &[u8], raw: &[u8])-> String {
+fn readable_address(prefix: &[u8], raw: &[u8])-> String {
     let (mut key, mut output) = (Vec::new(), Vec::new());
     key.extend_from_slice(prefix);
     key.extend_from_slice(&raw[..KEY_LENGTH]);
