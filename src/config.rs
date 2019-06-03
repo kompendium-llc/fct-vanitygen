@@ -42,8 +42,8 @@ pub fn parse_args() -> Config {
 fn get_args<'a>() -> ArgMatches<'a>{
     App::new("fct address generator")
             .version(clap::crate_version!())
-            .author("Mitchell Berry")
-            .about("Creates custom addresses for use with the Factom protocol")
+            .author("©Mitchell Berry 2019 - MIT Licensed")
+            .about("\nCreates custom addresses for use with the Factom protocol")
             .arg(Arg::with_name("Entry Credit Address")
                 .short("e")
                 .long("entry-credit")
