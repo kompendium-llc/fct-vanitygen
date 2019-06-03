@@ -22,7 +22,23 @@ const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrst
 struct Args {
     input: Box<Path>,
     output: Box<Path>,
-    verbose: bool
+    verbose: bool,
+    case: bool
+}
+
+struct FctPrefix {
+    public: [u8; 2],
+    private: [u8;2]
+}
+
+struct EcPrefix {
+    public: [u8; 2],
+    private: [u8;2]
+}
+
+enum Prefix {
+    FctPrefix,
+    EcPrefix
 }
 
 fn main() {
@@ -32,6 +48,7 @@ fn main() {
     let output_file = args.value_of("Output").unwrap_or(KEYSPATH);
     let verbose = args.is_present("Verbose");
     let case = args.is_present("Ignore Case");
+    let ec = args.is_present("Entry Credit Address");
     let names = read_file(input_file);
     let set = compile_regex(names, case);
     let mut keys_file = initialise_output_file(output_file);
@@ -69,6 +86,10 @@ fn parse_args<'a>() -> ArgMatches<'a>{
             .version(clap::crate_version!())
             .author("Mitchell Berry")
             .about("Creates custom factoid addresses")
+            .arg(Arg::with_name("Entry Credit Address")
+                .short("e")
+                .long("entry-credit")
+                .help("Generates entry redit addresses instead of factoid addresses"))
             .arg(Arg::with_name("Verbose")
                 .short("v")
                 .long("verbose")
