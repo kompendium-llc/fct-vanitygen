@@ -5,6 +5,8 @@ use ed25519_dalek::Keypair;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::env::current_dir;
+use regex::RegexSet;
 
 const KEY_LENGTH: usize = 32;
 const CHECKSUM_LENGTH: usize = 4;
@@ -12,26 +14,51 @@ const CHECKSUM_LENGTH: usize = 4;
 const PUB_PREFIX: [u8; 2] = [0x5f, 0xb1];
 const PRIV_PREFIX: [u8; 2] = [0x64, 0x78];
 
-const FILEPATH: &str = "prefixes";
+const FILEPATH: &str = "target\\debug\\names.txt";
+const KEYSPATH: &str = "fct_keys.txt";
 const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
 
 
 fn main() {
-    let keypair = generate_ed25519_keypair();
-    let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
-    let priv_address = human_readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
-    println!("{}\n{}", pub_address, priv_address);
-    let prefixes = read_file();
-    let prefixes_u8 = prefixes_as_bytes(prefixes);
+    // let keypair = generate_ed25519_keypair();
+    // let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+    // let priv_address = human_readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
+    // println!("{}\n{}", pub_address, priv_address);
+    dbg!(current_dir());
+    let names = read_file(FILEPATH);
+    let set = compile_regex(names);
+    // let prefixes_u8 = prefixes_as_bytes(prefixes);
+    // dbg!(bs58::decode("FA2tYULAgg3XPgeE5St62xvvQAVaAZin34pcDbAVdRAWHEEshrks").into_vec().unwrap());
     loop {
         let keypair = generate_ed25519_keypair();
-        let pub_bytes = assemble_address_bytes(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
-        for prefix in prefixes_u8.iter() {
-            if compare_prefixes(prefix, &pub_bytes) {
-                println!("{}", bs58::encode(&pub_bytes).into_string())
-            }
+        let pub_address = human_readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+        if check_match(&pub_address, &set){
+            println!("{}", pub_address);
         }
+
+
+        // let pub_bytes = assemble_address_bytes(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+        // for prefix in prefixes_u8.iter() {
+        //     if compare_prefixes(prefix, &pub_bytes) {
+        //         // println!("{}", bs58::encode(&prefix).into_string());
+        //         println!("{}", bs58::encode(&pub_bytes).into_string());
+        //         // dbg!(&prefix);
+        //         // dbg!(&pub_bytes[..4]);
+        //     }
+        // }
     }
+}
+
+fn compile_regex(names: Vec<String>) -> RegexSet{
+    let mut set = Vec::new();
+    for name in names.iter() {
+        set.push(format!(r"^FA[123]{}\w*", name));
+    }
+    RegexSet::new(&set).unwrap()
+}
+
+fn check_match(pub_address: &str, set: &RegexSet) -> bool {
+    set.is_match(pub_address)
 }
 
 fn base58_char(c: char)-> Option<char> {
@@ -49,34 +76,35 @@ fn valid_base58(prefix: &str) -> bool {
     valid
 }
 
-fn read_file() -> Vec<String> {
+fn read_file(filepath: &str) -> Vec<String> {
     let mut prefixes = Vec::new();
-    let lines = parse_lines(FILEPATH).expect("Unable to open prefix file");
+    let path = Path::new(filepath);
+    let lines = parse_lines(path).expect("Unable to open prefix file");
     for prefix in lines {
-        let word = prefix.unwrap();
-        if valid_base58(&word) {
-            prefixes.push(word);
+        let name = prefix.unwrap();
+        if valid_base58(&name) {
+            prefixes.push(name);
         }
         else {
-            println!("Skipping invalid: {}", word);
+            println!("Skipping invalid base58 name: {}", name);
         }
     }
     prefixes
 }
 
-fn prefixes_as_bytes(prefixes: Vec<String>) -> Vec<Vec<u8>> {
-    let mut prefixes_u8 = Vec::new(); 
-    for prefix in prefixes {
-        let mut bytes = vec!(PUB_PREFIX[0], PUB_PREFIX[1]);
-        bytes.extend(prefix.as_bytes());
-        prefixes_u8.push(bytes);
-    }
-    prefixes_u8
-}
+// fn prefixes_as_bytes(prefixes: Vec<String>) -> Vec<Vec<u8>> {
+//     let mut prefixes_u8 = Vec::new(); 
+//     for prefix in prefixes {
+//         let mut bytes = vec!(PUB_PREFIX[0], PUB_PREFIX[1]);
+//         bytes.extend(bs58::decode(prefix).into_vec().unwrap());
+//         prefixes_u8.push(bytes);
+//     }
+//     prefixes_u8
+// }
 
-fn compare_prefixes(prefix: &Vec<u8>, pub_address: &Vec<u8>) -> bool {
-    pub_address.starts_with(prefix)
-}
+// fn compare_prefixes(prefix: &Vec<u8>, pub_address: &Vec<u8>) -> bool {
+//     pub_address.starts_with(prefix)
+// }
 
 fn parse_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
@@ -118,15 +146,15 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
     out
 }
 
-fn assemble_address_bytes(prefix: &[u8], raw: &[u8])-> Vec<u8> {
-    let (mut key, mut output) = (Vec::new(), Vec::new());
-    key.extend_from_slice(prefix);
-    key.extend_from_slice(&raw[..KEY_LENGTH]);
-    let checksum = &double_sha(&key)[..CHECKSUM_LENGTH];
-    output.extend_from_slice(&key);
-    output.extend_from_slice(checksum);
-    output
-}
+// fn assemble_address_bytes(prefix: &[u8], raw: &[u8])-> Vec<u8> {
+//     let (mut key, mut output) = (Vec::new(), Vec::new());
+//     key.extend_from_slice(prefix);
+//     key.extend_from_slice(&raw[..KEY_LENGTH]);
+//     let checksum = &double_sha(&key)[..CHECKSUM_LENGTH];
+//     output.extend_from_slice(&key);
+//     output.extend_from_slice(checksum);
+//     output
+// }
 
 fn human_readable_address(prefix: &[u8], raw: &[u8])-> String {
     let (mut key, mut output) = (Vec::new(), Vec::new());
