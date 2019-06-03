@@ -1,5 +1,5 @@
 
-use regex::RegexSet;
+
 use rand::rngs::OsRng;
 use std::env::current_dir;
 use ed25519_dalek::Keypair;
@@ -7,13 +7,13 @@ use sha2::{Sha256, Sha512, Digest};
 
 mod config;
 mod files;
+mod matching;
 
 use config::parse_args;
 use files::*;
+use matching::*;
 
 const CHECKSUM_LENGTH: usize = 4;
-const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
-
 
 fn main() {
     dbg!(current_dir().unwrap());
