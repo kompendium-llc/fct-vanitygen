@@ -11,3 +11,4 @@ bs58 = "0.2.2"
 ed25519-dalek = "0.9.1"
 num-bigint = { version = "0.2.2", features = ["rand"] }
 regex = "1.1.6"
+clap = "2.33.0"
