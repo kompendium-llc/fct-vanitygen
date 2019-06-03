@@ -9,13 +9,15 @@ use ed25519_dalek::Keypair;
 use clap::{Arg, App, ArgMatches};
 use sha2::{Sha256, Sha512, Digest};
 
-const KEY_LENGTH: usize = 32;
 const CHECKSUM_LENGTH: usize = 4;
 
-const PUB_PREFIX: [u8; 2] = [0x5f, 0xb1];
-const PRIV_PREFIX: [u8; 2] = [0x64, 0x78];
+const FCT_PUB: [u8; 2] = [0x5f, 0xb1];
+const FCT_PRIV: [u8; 2] = [0x64, 0x78];
+const EC_PUB: [u8; 2] = [0x59, 0x2a];
+const EC_PRIV: [u8; 2] = [0x5d, 0xb6];
 
-const FILEPATH: &str = "target\\debug\\names.txt";
+
+const FILEPATH: &str = "names.txt";
 const KEYSPATH: &str = "keys.txt";
 const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
 
@@ -24,21 +26,6 @@ struct Args {
     output: Box<Path>,
     verbose: bool,
     case: bool
-}
-
-struct FctPrefix {
-    public: [u8; 2],
-    private: [u8;2]
-}
-
-struct EcPrefix {
-    public: [u8; 2],
-    private: [u8;2]
-}
-
-enum Prefix {
-    FctPrefix,
-    EcPrefix
 }
 
 fn main() {
@@ -50,14 +37,18 @@ fn main() {
     let case = args.is_present("Ignore Case");
     let ec = args.is_present("Entry Credit Address");
     let names = read_file(input_file);
-    let set = compile_regex(names, case);
+    let regex_prefix = if ec {"EC[123]"} else {"FA[123]"};
+    let pub_prefix = if ec {EC_PUB} else {FCT_PUB};
+    let priv_prefix = if ec {EC_PRIV} else {FCT_PRIV};
+    let rcd = if ec {ec_rcd} else {fct_rcd};
+    let set = compile_regex(names, case, regex_prefix);
     let mut keys_file = initialise_output_file(output_file);
 
     loop {
         let keypair = generate_ed25519_keypair();
-        let pub_address = readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
+        let pub_address = readable_address(&pub_prefix, &rcd(keypair.public.to_bytes()));
         if set.is_match(&pub_address){
-            let priv_address = readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
+            let priv_address = readable_address(&priv_prefix, &keypair.secret.to_bytes());
             write_keys(&mut keys_file, &pub_address, &priv_address);
             if verbose {
                 println!("Public Address: {}\nPrivate Address: {}\n",
@@ -111,11 +102,11 @@ fn parse_args<'a>() -> ArgMatches<'a>{
             .get_matches()
 }
 
-fn compile_regex(names: Vec<String>, case_sensitive: bool) -> RegexSet{
+fn compile_regex(names: Vec<String>, case_sensitive: bool, prefix: &str) -> RegexSet{
     let mut set = Vec::new();
     let case_flag = if case_sensitive { "(?i)" } else { "" };
     for name in names.iter() {
-        set.push(format!(r"^FA[123]{}\w*{}", name, case_flag));
+        set.push(format!(r"^{}{}\w*{}", prefix, name, case_flag));
     }
     RegexSet::new(&set).unwrap()
 }
@@ -164,12 +155,17 @@ fn generate_ed25519_keypair()-> Keypair {
     Keypair::generate::<Sha512, _>(&mut csprng)  
 }
 
-fn rcd(key: [u8; 32])-> [u8; 32]{
+fn fct_rcd(key: [u8; 32])-> [u8; 32]{
     let mut input = [0x1; 33];
     for (i, byte) in key.iter().enumerate() {
         input[i+1] = *byte;
     }
     double_sha(&input)
+}
+
+// Dummy function, returns key. Rcd isnt used for EC addresses.
+fn ec_rcd(key: [u8; 32])-> [u8; 32] {
+    key
 }
 
 fn double_sha(input: &[u8])-> [u8; 32] {
@@ -189,7 +185,7 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
 fn readable_address(prefix: &[u8], raw: &[u8])-> String {
     let (mut key, mut output) = (Vec::new(), Vec::new());
     key.extend_from_slice(prefix);
-    key.extend_from_slice(&raw[..KEY_LENGTH]);
+    key.extend_from_slice(&raw);
     let checksum = &double_sha(&key)[..CHECKSUM_LENGTH];
     output.extend_from_slice(&key);
     output.extend_from_slice(checksum);
