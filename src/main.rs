@@ -3,6 +3,7 @@ mod config;
 mod address;
 mod matching;
 
+use std::time;
 use files::*;
 use address::*;
 use matching::*;
@@ -10,6 +11,7 @@ use config::parse_args;
 use rayon::ThreadPoolBuilder;
 
 fn main() {
+    // Build Configuration
     let config = parse_args();
     let names = read_file(&config.input);
     let rcd = if config.ec {ec_rcd} else {fct_rcd};
@@ -17,7 +19,12 @@ fn main() {
     let set = compile_regex(names, config.case, &config.regex_prefix);
     let pool = ThreadPoolBuilder::new()
                 .num_threads(config.threads as usize).build().unwrap();
-   
+    
+    // Rudimentary rate checking
+    let mut count: u64 = 0;
+    let mut start = time::Instant::now();
+
+    // Main threadpool loop
     loop {
         pool.install(|| {
             let keypair = generate_ed25519_keypair();
@@ -32,6 +39,16 @@ fn main() {
                             pub_address, priv_address);
                 }
             }
-        })
+        });
+
+        // Rudimentary rate checking
+        count += 1;
+        if count == 100000 {
+            let time = start.elapsed().as_secs();
+            let rate = count / time;
+            println!("{} addresses per second\n", rate);
+            count = 0;
+            start = time::Instant::now()
+        }
     }
 }
