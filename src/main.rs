@@ -21,26 +21,22 @@ const FILEPATH: &str = "names.txt";
 const KEYSPATH: &str = "keys.txt";
 const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
 
-struct Args {
-    input: Box<Path>,
-    output: Box<Path>,
+#[derive(Default)]
+struct Config {
+    input: String,
+    output: String,
     verbose: bool,
-    case: bool
+    case: bool,
+    ec: bool,
+    regex_prefix: String,
+    pub_prefix: [u8; 2],
+    priv_prefix: [u8; 2],
 }
 
 fn main() {
     dbg!(current_dir().unwrap());
     let args = parse_args();
-    let input_file = args.value_of("Input").unwrap_or(FILEPATH);
-    let output_file = args.value_of("Output").unwrap_or(KEYSPATH);
-    let verbose = args.is_present("Verbose");
-    let case = args.is_present("Ignore Case");
-    let ec = args.is_present("Entry Credit Address");
-    let names = read_file(input_file);
-    let regex_prefix = if ec {"EC[123]"} else {"FA[123]"};
-    let pub_prefix = if ec {EC_PUB} else {FCT_PUB};
-    let priv_prefix = if ec {EC_PRIV} else {FCT_PRIV};
-    let rcd = if ec {ec_rcd} else {fct_rcd};
+
     let set = compile_regex(names, case, regex_prefix);
     let mut keys_file = initialise_output_file(output_file);
 
@@ -72,7 +68,36 @@ fn initialise_output_file(output_file: &str) -> File {
             .expect("Unable to initialise output file")
 }
 
-fn parse_args<'a>() -> ArgMatches<'a>{
+fn parse_args() -> Config {
+    let args = get_args();
+    let mut config = Config {
+        input: args.value_of("Input").unwrap_or(FILEPATH).to_string(),
+        output: args.value_of("Output").unwrap_or(KEYSPATH).to_string(),
+        verbose: args.is_present("Verbose"),
+        case: args.is_present("Ignore Case"),
+        ec: args.is_present("Entry Credit Address"),
+        ..Default::default()
+    };
+
+    config.regex_prefix = if config.ec {"EC[123]"} else {"FA[123]"}.to_string();
+    config.pub_prefix = if config.ec {EC_PUB} else {FCT_PUB};
+    config.priv_prefix = if config.ec {EC_PRIV} else {FCT_PRIV};
+
+    config
+
+    // let input_file = args.value_of("Input").unwrap_or(FILEPATH);
+    // let output_file = args.value_of("Output").unwrap_or(KEYSPATH);
+    // let verbose = args.is_present("Verbose");
+    // let case = args.is_present("Ignore Case");
+    // let ec = args.is_present("Entry Credit Address");
+    // let names = read_file(input_file);
+    // let regex_prefix = if ec {"EC[123]"} else {"FA[123]"};
+    // let pub_prefix = if ec {EC_PUB} else {FCT_PUB};
+    // let priv_prefix = if ec {EC_PRIV} else {FCT_PRIV};
+    // let rcd = if ec {ec_rcd} else {fct_rcd};
+}
+
+fn get_args<'a>() -> ArgMatches<'a>{
     App::new("fct address generator")
             .version(clap::crate_version!())
             .author("Mitchell Berry")
@@ -155,7 +180,7 @@ fn generate_ed25519_keypair()-> Keypair {
     Keypair::generate::<Sha512, _>(&mut csprng)  
 }
 
-fn fct_rcd(key: [u8; 32])-> [u8; 32]{
+fn fct_rcd(key: [u8; 32]) -> [u8; 32]{
     let mut input = [0x1; 33];
     for (i, byte) in key.iter().enumerate() {
         input[i+1] = *byte;
