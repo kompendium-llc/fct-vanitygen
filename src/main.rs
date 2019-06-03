@@ -31,14 +31,15 @@ fn main() {
     let input_file = args.value_of("Input").unwrap_or(FILEPATH);
     let output_file = args.value_of("Output").unwrap_or(KEYSPATH);
     let verbose = args.is_present("Verbose");
+    let case = args.is_present("Ignore Case");
     let names = read_file(input_file);
-    let set = compile_regex(names);
+    let set = compile_regex(names, case);
     let mut keys_file = initialise_output_file(output_file);
 
     loop {
         let keypair = generate_ed25519_keypair();
         let pub_address = readable_address(&PUB_PREFIX, &rcd(keypair.public.to_bytes()));
-        if check_match(&pub_address, &set){
+        if set.is_match(&pub_address){
             let priv_address = readable_address(&PRIV_PREFIX, &keypair.secret.to_bytes());
             write_keys(&mut keys_file, &pub_address, &priv_address);
             if verbose {
@@ -57,8 +58,9 @@ fn write_keys(keys_file: &mut File, public: &str, private: &str) {
 
 fn initialise_output_file(output_file: &str) -> File {
     OpenOptions::new()
+            .create(true)
             .append(true)
-            .open(output_file)
+            .open(Path::new(output_file))
             .expect("Unable to initialise output file")
 }
 
@@ -81,19 +83,20 @@ fn parse_args<'a>() -> ArgMatches<'a>{
                 .long("output")
                 .takes_value(true)
                 .help("Sets the output file for matched keys (Default: keys.txt)"))
+            .arg(Arg::with_name("Ignore Case")
+                .short("c")
+                .long("ignore-case")
+                .help("Ignores case when matching addresses, dramatically increases output"))
             .get_matches()
 }
 
-fn compile_regex(names: Vec<String>) -> RegexSet{
+fn compile_regex(names: Vec<String>, case_sensitive: bool) -> RegexSet{
     let mut set = Vec::new();
+    let case_flag = if case_sensitive { "(?i)" } else { "" };
     for name in names.iter() {
-        set.push(format!(r"^FA[123]{}\w*", name));
+        set.push(format!(r"^FA[123]{}\w*{}", name, case_flag));
     }
     RegexSet::new(&set).unwrap()
-}
-
-fn check_match(pub_address: &str, set: &RegexSet) -> bool {
-    set.is_match(pub_address)
 }
 
 fn base58_char(c: char)-> Option<char> {
