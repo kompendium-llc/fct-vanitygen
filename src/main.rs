@@ -1,7 +1,4 @@
-use std::path::Path;
-use std::io::prelude::*;
-use std::io::{self, BufRead};
-use std::fs::{File, OpenOptions};
+
 use regex::RegexSet;
 use rand::rngs::OsRng;
 use std::env::current_dir;
@@ -9,8 +6,10 @@ use ed25519_dalek::Keypair;
 use sha2::{Sha256, Sha512, Digest};
 
 mod config;
+mod files;
 
 use config::parse_args;
+use files::*;
 
 const CHECKSUM_LENGTH: usize = 4;
 const B58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYzabcdefghijkmnopqrstuvwxyz";
@@ -38,71 +37,7 @@ fn main() {
     }
 }
 
-fn write_keys(keys_file: &mut File, public: &str, private: &str) {
-    if let Err(e) = writeln!(keys_file,"{}\n{}\n", &public, &private) {
-        eprintln!("Couldn't write to file: {}", e);
-    }       
-}
 
-fn initialise_output_file(output_file: &str) -> File {
-    OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(Path::new(output_file))
-            .expect("Unable to initialise output file")
-}
-
-
-
-
-
-fn compile_regex(names: Vec<String>, case_sensitive: bool, prefix: &str) -> RegexSet{
-    let mut set = Vec::new();
-    let case_flag = if case_sensitive { "(?i)" } else { "" };
-    for name in names.iter() {
-        set.push(format!(r"^{}{}{}\w*", prefix, case_flag, name));
-    }
-    RegexSet::new(&set).unwrap()
-}
-
-fn base58_char(c: char)-> Option<char> {
-    B58_ALPHABET.chars().find(|x: &char| x == &c)
-}
-
-fn valid_base58(prefix: &str) -> bool {
-    let mut valid = false;
-    for letter in prefix.chars() {
-        match base58_char(letter) {
-            Some(_) => valid = true,
-            None => {valid = false; break;} 
-        }
-    }
-    valid
-}
-
-fn read_file(filepath: &str) -> Vec<String> {
-    let mut prefixes = Vec::new();
-    let path = Path::new(filepath);
-    let lines = parse_lines(path).expect("Unable to open prefix file");
-    for prefix in lines {
-        let name = prefix.unwrap();
-        if valid_base58(&name) {
-            prefixes.push(name);
-        }
-        else {
-            println!("Skipping invalid base58 name: {}", name);
-        }
-    }
-    prefixes
-}
-
-fn parse_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
 
 fn generate_ed25519_keypair()-> Keypair {
     let mut csprng: OsRng = OsRng::new().unwrap();
