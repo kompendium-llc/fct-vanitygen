@@ -22,9 +22,9 @@ fn main() {
 
     loop {
         let keypair = generate_ed25519_keypair();
-        let pub_address = readable_address(&config.pub_prefix, &rcd(keypair.public.to_bytes()));
+        let pub_address = readable(&config.pub_prefix, &rcd(keypair.public.to_bytes()));
         if set.is_match(&pub_address){
-            let priv_address = readable_address(&config.priv_prefix, &keypair.secret.to_bytes());
+            let priv_address = readable(&config.priv_prefix, &keypair.secret.to_bytes());
             write_keys(&mut keys_file, &pub_address, &priv_address);
             if config.verbose {
                 println!("Public Address: {}\nPrivate Address: {}\n",

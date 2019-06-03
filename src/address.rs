@@ -36,7 +36,7 @@ fn slice_to_array(slice: &[u8]) -> [u8; 32] {
     out
 }
 
-pub fn readable_address(prefix: &[u8], raw: &[u8])-> String {
+pub fn readable(prefix: &[u8], raw: &[u8])-> String {
     let (mut key, mut output) = (Vec::new(), Vec::new());
     key.extend_from_slice(prefix);
     key.extend_from_slice(&raw);
