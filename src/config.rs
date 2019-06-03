@@ -13,6 +13,7 @@ pub struct Config {
     pub input: String,
     pub output: String,
     pub verbose: bool,
+    pub threads: u8,
     pub case: bool,
     pub ec: bool,
     pub regex_prefix: String,
@@ -26,6 +27,8 @@ pub fn parse_args() -> Config {
         input: args.value_of("Input").unwrap_or(FILEPATH).to_string(),
         output: args.value_of("Output").unwrap_or(KEYSPATH).to_string(),
         verbose: args.is_present("Verbose"),
+        threads: args.value_of("Threads").unwrap_or("2")
+                        .parse::<u8>().expect("Invalid Thread Number"),
         case: args.is_present("Ignore Case"),
         ec: args.is_present("Entry Credit Address"),
         ..Default::default()
@@ -45,6 +48,11 @@ fn get_args<'a>() -> ArgMatches<'a>{
                 .short("e")
                 .long("entry-credit")
                 .help("Generates entry redit addresses instead of factoid addresses"))
+            .arg(Arg::with_name("Threads")
+                .short("t")
+                .long("threads")
+                .takes_value(true)
+                .help("Number of simultaneous threads to use. Default: 2"))
             .arg(Arg::with_name("Verbose")
                 .short("v")
                 .long("verbose")
@@ -53,15 +61,15 @@ fn get_args<'a>() -> ArgMatches<'a>{
                 .short("i")
                 .long("input")
                 .takes_value(true)
-                .help("Sets the input file to use (Default: names.txt)"))
+                .help("Sets the input file to use. Default: names.txt"))
             .arg(Arg::with_name("Output")
                 .short("o")
                 .long("output")
                 .takes_value(true)
-                .help("Sets the output file for matched keys (Default: keys.txt)"))
+                .help("Sets the output file for matched keys. Default: keys.txt"))
             .arg(Arg::with_name("Ignore Case")
                 .short("c")
                 .long("ignore-case")
-                .help("Ignores case when matching addresses, dramatically increases output"))
+                .help("Ignores case when matching addresses"))
             .get_matches()
 }

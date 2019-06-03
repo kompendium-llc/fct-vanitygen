@@ -10,16 +10,14 @@ use config::parse_args;
 use rayon::ThreadPoolBuilder;
 
 fn main() {
-    
-    
     let config = parse_args();
     let names = read_file(&config.input);
     let rcd = if config.ec {ec_rcd} else {fct_rcd};
     let mut keys_file = initialise_output_file(&config.output);
     let set = compile_regex(names, config.case, &config.regex_prefix);
-    let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();
-
-    
+    let pool = ThreadPoolBuilder::new()
+                .num_threads(config.threads as usize).build().unwrap();
+   
     loop {
         pool.install(|| {
             let keypair = generate_ed25519_keypair();
