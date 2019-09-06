@@ -1,14 +1,27 @@
 # FCT-VanityGen
 
-Generates custom Factoid and Entry Credit addresses for use with the Factom protocol.
+Generates custom Factoid and Entry Credit addresses for use with the Factom protocol. 
+
+Factoid addresses will range between `FA1y5ZGuHSLmf2TqNf6hVMkPiNGyQpQDTFJvDLRkKQaoPo4bmbgu` and `FA3upjWMKHmStAHR5ZgKVK4zVHPb8U74L2wzKaaSDQEonHajiLeq`
+
+Entry Credit addresses will range between `EC1m9mouvUQeEidmqpUYpYtXg8fvTYi6GNHaKg8KMLbdMBrFfmUa` and `EC3htx3MxKqKTrTMYj4ApWD8T3nYBCQw99veRvH1FLFdjgN6GuNK`
+
+This tool ignores the first 3 characters of an address.
 
 ### Installation
 #### Binaries
-Download a binary from the releases page.
+Pre-built binaries are available on the [releases](https://github.com/MitchellBerry/fctutils/releases/tag/v0.1.0) page.
 
 #### Cargo
 ```bash
 cargo install fct-vanitygen
+```
+
+#### Building from source
+```bash
+git clone https://github.com/MitchellBerry/fctutils.git
+cd fct-vanitygen
+cargo build --release
 ```
 
 ### Usage
