@@ -40,15 +40,5 @@ fn main() {
                 }
             }
         });
-
-        // Rudimentary rate checking
-        count += 1;
-        if count == 100000 {
-            let time = start.elapsed().as_secs();
-            let rate = count / time;
-            println!("{} addresses per second\n", rate);
-            count = 0;
-            start = time::Instant::now()
-        }
     }
 }
